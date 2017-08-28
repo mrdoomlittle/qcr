@@ -1,0 +1,3 @@
+[submodule "err"]
+	path = err
+	url = git@github.com:mrdoomlittle/err.git
