@@ -18,7 +18,7 @@ enum {
 # define COMMA 0x1
 struct token {
 	mdl_u8_t kind, id;
-	void *val;
+	void *p;
 };
 
 struct buff tok_ib;
@@ -39,8 +39,8 @@ void build_token(struct token *__tok, struct token *__tmpl) {
 	if (__tmpl != NULL) *__tok = *__tmpl;
 }
 
-void make_ident(struct token *__tok, char *__val) {
-	build_token(__tok, &(struct token){.kind=TOK_IDENT, .val=(void*)__val});
+void make_ident(struct token *__tok, char *__s) {
+	build_token(__tok, &(struct token){.kind=TOK_IDENT, .p=(void*)__s});
 }
 
 void make_keyword(struct token *__tok, mdl_u8_t __id) {
@@ -48,15 +48,15 @@ void make_keyword(struct token *__tok, mdl_u8_t __id) {
 }
 
 void make_str(struct token *__tok, char *__s) {
-	build_token(__tok, &(struct token){.kind=TOK_STR, .val=(void*)__s});
+	build_token(__tok, &(struct token){.kind=TOK_STR, .p=(void*)__s});
 }
 
-void make_no(struct token *__tok, char *__val) {
-	build_token(__tok, &(struct token){.kind=TOK_NO, .val=(void*)__val});
+void make_no(struct token *__tok, char *__s) {
+	build_token(__tok, &(struct token){.kind=TOK_NO, .p=(void*)__s});
 }
 
-void make_chr(struct token *__tok, char *__val) {
-    build_token(__tok, &(struct token){.kind=TOK_CHR, .val=(void*)__val});
+void make_chr(struct token *__tok, char *__s) {
+    build_token(__tok, &(struct token){.kind=TOK_CHR, .p=(void*)__s});
 }
 
 mdl_uint_t qcr_str_to_int(char *__s) {
@@ -243,11 +243,11 @@ mdl_u8_t* qcr_read_literal(struct qcr *__qcr, mdl_u8_t *__kind) {
 	*__kind = val->kind;
 	if (val->kind == TOK_NO) {
 		mdl_uint_t *i_val = (mdl_uint_t*)malloc(sizeof(mdl_uint_t));
-		*i_val = qcr_str_to_int((char*)val->val);
+		*i_val = qcr_str_to_int((char*)val->p);
 		return (mdl_u8_t*)i_val;
 	}
 
-	return (mdl_u8_t*)val->val;
+	return (mdl_u8_t*)val->p;
 }
 
 mdl_err_t qcr_read_decl(struct qcr *__qcr) {
@@ -266,7 +266,7 @@ mdl_err_t qcr_read_decl(struct qcr *__qcr) {
 
 	struct qcr_var *var = NULL;
 	vec_push_back(&__qcr->vars, (void**)&var);
-	*var = (struct qcr_var){.kind=var_kind, .name=(char*)name->val, .val=val};
+	*var = (struct qcr_var){.kind=var_kind, .name=(char*)name->p, .val=val};
 
 	if (!qcr_expect_tok(__qcr, TOK_KEYWORD, COMMA)) {
 		printf("expected comma.\n");
