@@ -2,7 +2,7 @@
 # include <stdlib.h>
 # include <string.h>
 # include <stdio.h>
-# define PAGE_SIZE 200
+# define PAGE_SIZE 86
 mdl_err_t vec_init(struct vec *__vec, mdl_uint_t __blk_size) {
 	*__vec = (struct vec) {
 		.blk_size = __blk_size,
@@ -17,7 +17,7 @@ mdl_err_t vec_init(struct vec *__vec, mdl_uint_t __blk_size) {
 }
 
 void vec_push_back(struct vec *__vec, void **__p) {
-	if (((__vec->page_c*(PAGE_SIZE*__vec->blk_size))-(__vec->elem_c*__vec->blk_size)) > (PAGE_SIZE*__vec->blk_size)) {
+	if (((__vec->page_c*(PAGE_SIZE*__vec->blk_size))-((__vec->elem_c+1)*__vec->blk_size)) > (PAGE_SIZE*__vec->blk_size)) {
 		__vec->p = (mdl_u8_t*)realloc(__vec->p, (++__vec->page_c)*(PAGE_SIZE*__vec->blk_size));
 	}
 
@@ -37,6 +37,8 @@ void vec_pop_back(struct vec *__vec, void *__p) {
 	__vec->elem_c--;
 }
 
+void* vec_begin(struct vec *__vec) {return __vec->p;}
+void* vec_end(struct vec *__vec) {return __vec->p+(__vec->elem_c*__vec->blk_size);}
 mdl_err_t vec_de_init(struct vec *__vec) {
 	if (__vec->p != NULL) free(__vec->p);
 }

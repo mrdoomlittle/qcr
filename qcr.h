@@ -3,6 +3,18 @@
 # include <eint_t.h>
 # include <err.h>
 
+enum {
+	_qc_vt_str,
+	_qc_vt_int,
+	_qc_vt_chr
+};
+
+struct qcr_var {
+	mdl_u8_t kind;
+	char *name;
+	mdl_u8_t *val;
+};
+
 struct buff {
 	mdl_u8_t *p, *itr;
 	mdl_uint_t blk_size;
@@ -16,6 +28,7 @@ struct vec {
 };
 
 struct qcr {
+	struct vec vars;
 	mdl_uint_t fsize;
 	mdl_u8_t *fp, *f_itr;
 	struct vec toks;
@@ -35,6 +48,8 @@ mdl_err_t vec_init(struct vec*, mdl_uint_t);
 void vec_push_back(struct vec*, void**);
 void vec_pop_back(struct vec*, void*);
 mdl_err_t vec_de_init(struct vec*);
+void* vec_begin(struct vec*);
+void* vec_end(struct vec*);
 
 // qcr.c
 mdl_err_t qcr_init(struct qcr*);
