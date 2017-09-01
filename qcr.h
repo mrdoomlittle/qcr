@@ -1,6 +1,6 @@
 # ifndef __qcr__h
 # define __qcr__h
-# include <eint_t.h>
+# include <mdlint.h>
 # include <err.h>
 
 enum {
