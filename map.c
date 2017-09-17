@@ -27,7 +27,7 @@ mdl_u32_t map_hash(mdl_u8_t const *__key, mdl_uint_t __bc) {
 }
 
 map_entry_t *map_find(struct map *__map, mdl_u8_t const *__key, mdl_uint_t __bc, mdl_u32_t __val) {
-	struct vec **map_blk = __map->table+*__key;
+	struct vec **map_blk = __map->table+(__val&0xFF);
 	if (*map_blk == NULL) return NULL;
 
 	map_entry_t *itr = (map_entry_t*)vec_begin(*map_blk);
@@ -44,9 +44,10 @@ map_entry_t *map_find(struct map *__map, mdl_u8_t const *__key, mdl_uint_t __bc,
 }
 
 mdl_err_t map_get(struct map *__map, mdl_u8_t const *__key, mdl_uint_t __bc, void **__data) {
-	struct vec **map_blk = __map->table+*__key;
-	if (*map_blk == NULL) return MDL_FAILURE;
 	mdl_u32_t val = map_hash(__key, __bc);
+	struct vec **map_blk = __map->table+(val&0xFF);
+	if (*map_blk == NULL) return MDL_FAILURE;
+
 	*__data = map_find(__map, __key, __bc, val)->data;
 	return MDL_SUCCESS;
 }
@@ -56,7 +57,7 @@ mdl_err_t map_put(struct map *__map, mdl_u8_t const *__key, mdl_uint_t __bc, voi
 	mdl_u32_t val = map_hash(__key, __bc);
 	if (map_find(__map, __key, __bc, val) != NULL) return MDL_FAILURE;
 
-	struct vec **map_blk = __map->table+*__key;
+	struct vec **map_blk = __map->table+(val&0xFF);
 	if (*map_blk == NULL) {
 		*map_blk = (struct vec*)malloc(sizeof(struct vec));
 		vec_init(*map_blk, sizeof(map_entry_t));
@@ -72,14 +73,14 @@ mdl_err_t map_put(struct map *__map, mdl_u8_t const *__key, mdl_uint_t __bc, voi
 }
 
 mdl_err_t map_init(struct map *__map) {
-	__map->table = (struct vec**)malloc(((mdl_u8_t)~0)*sizeof(struct vec*));
+	__map->table = (struct vec**)malloc(0xFF*sizeof(struct vec*));
 	struct vec **itr = __map->table;
-	while(itr != __map->table+(mdl_u8_t)~0) *(itr++) = NULL;
+	while(itr != __map->table+0xFF) *(itr++) = NULL;
 }
 
 mdl_err_t map_de_init(struct map *__map) {
 	struct vec **itr = __map->table;
-	while(itr != __map->table+(mdl_u8_t)~0) {
+	while(itr != __map->table+0xFF) {
 		if (*itr != NULL) vec_de_init(*itr);
 		itr++;
 	}
