@@ -21,6 +21,12 @@ struct token {
 	void *p;
 };
 
+struct qcr_var* qcr_get_var(struct qcr *__qcr, char *__name) {
+	struct qcr_var *ret;
+	map_get(&__qcr->env, (mdl_u8_t const*)__name, strlen(__name), (void**)&ret);
+	return ret;
+}
+
 struct buff tok_ib;
 struct buff tmp_buff;
 mdl_err_t qcr_init(struct qcr *__qcr) {
@@ -28,6 +34,7 @@ mdl_err_t qcr_init(struct qcr *__qcr) {
 	buff_init(&tmp_buff, 80, sizeof(mdl_u8_t));
 	buff_init(&tok_ib, 20, sizeof(struct token*));
 	vec_init(&__qcr->vars, sizeof(struct qcr_var));
+	map_init(&__qcr->env);
 }
 
 mdl_u8_t static ignore_space(struct qcr *__qcr) {
@@ -231,6 +238,7 @@ mdl_err_t qcr_de_init(struct qcr *__qcr) {
 	if (__qcr->fp != NULL) free(__qcr->fp);
 	vec_de_init(&__qcr->toks);
 	buff_de_init(&tmp_buff);
+	map_de_init(&__qcr->env);
 }
 
 mdl_u8_t qcr_expect_tok(struct qcr *__qcr, mdl_u8_t __kind, mdl_u8_t __id) {
@@ -267,6 +275,8 @@ mdl_err_t qcr_read_decl(struct qcr *__qcr) {
 	struct qcr_var *var = NULL;
 	vec_push_back(&__qcr->vars, (void**)&var);
 	*var = (struct qcr_var){.kind=var_kind, .name=(char*)name->p, .val=val};
+
+	map_put(&__qcr->env, (char*)name->p, strlen((char*)name->p), var);
 
 	if (!qcr_expect_tok(__qcr, TOK_KEYWORD, COMMA)) {
 		printf("expected comma.\n");
