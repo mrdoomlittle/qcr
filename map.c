@@ -32,12 +32,8 @@ map_entry_t *map_find(struct map *__map, mdl_u8_t const *__key, mdl_uint_t __bc,
 
 	map_entry_t *itr = (map_entry_t*)vec_begin(*map_blk);
 	while(itr <= (map_entry_t*)vec_end(*map_blk)) {
-		if (itr->val == __val && itr->bc == __bc) {
-			if (!memcmp(itr->key, __key, __bc)) {
-				return itr;
-			}
-		}
-
+		if (itr->val == __val && itr->bc == __bc)
+			if (!memcmp(itr->key, __key, __bc)) return itr;
 		itr++;
 	}
 	return NULL;
@@ -78,12 +74,18 @@ mdl_err_t map_init(struct map *__map) {
 	while(itr != __map->table+0xFF) *(itr++) = NULL;
 }
 
+void static free_map_blk(struct vec **__map_blk) {
+	map_entry_t *itr = (map_entry_t*)vec_begin(*__map_blk);
+	while(itr <= (map_entry_t*)vec_end(*__map_blk)) free((itr++)->key);
+	vec_de_init(*__map_blk);
+	free(*__map_blk);
+}
+
 mdl_err_t map_de_init(struct map *__map) {
 	struct vec **itr = __map->table;
 	while(itr != __map->table+0xFF) {
-		if (*itr != NULL) vec_de_init(*itr);
+		if (*itr != NULL) free_map_blk(itr);
 		itr++;
 	}
-
 	free(__map->table);
 }
