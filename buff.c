@@ -20,6 +20,4 @@ void buff_itr_mf(struct buff *__buff){__buff->itr+=__buff->blk_size;}
 void buff_itr_mb(struct buff *__buff){__buff->itr-=__buff->blk_size;}
 void buff_put(struct buff *__buff, void *__p) {memcpy(__buff->itr, __p, __buff->blk_size);}
 void buff_get(struct buff *__buff, void *__p) {memcpy(__p, __buff->itr, __buff->blk_size);}
-mdl_err_t buff_de_init(struct buff *__buff) {
-	if (__buff->p != NULL) free(__buff->p);
-}
+void buff_de_init(struct buff *__buff) {if (__buff->p != NULL) free(__buff->p);}

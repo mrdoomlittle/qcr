@@ -9,10 +9,14 @@ enum {
 	_qc_vt_chr
 };
 
-struct qcr_var {
+struct qcr_val {
 	mdl_u8_t kind;
+	mdl_u8_t *p;
+};
+
+struct qcr_var {
+	struct qcr_val val;
 	char *name;
-	mdl_u8_t *val;
 };
 
 struct buff {
@@ -31,7 +35,13 @@ struct map {
 	struct vec **table;
 };
 
+struct qcr_array {
+	char *name;
+	struct vec data;
+};
+
 struct qcr {
+	struct vec arrays;
 	struct vec vars;
 	struct map env;
 	mdl_uint_t fsize;
@@ -53,7 +63,7 @@ void buff_itr_mf(struct buff*);
 void buff_itr_mb(struct buff*);
 void buff_itr_reset(struct buff*);
 mdl_uint_t buff_blk_c(struct buff*);
-mdl_err_t buff_de_init(struct buff*);
+void buff_de_init(struct buff*);
 // vec.c
 mdl_err_t vec_init(struct vec*, mdl_uint_t);
 void vec_push_back(struct vec*, void**);
@@ -61,9 +71,11 @@ void vec_pop_back(struct vec*, void*);
 mdl_err_t vec_de_init(struct vec*);
 void* vec_begin(struct vec*);
 void* vec_end(struct vec*);
+void* vec_get(struct vec*, mdl_uint_t);
 
 // qcr.c
-struct qcr_var* qcr_get_var(struct qcr*, char*);
+void* qcr_get_arr_elem(struct qcr*, void*, mdl_uint_t);
+void* qcr_get(struct qcr*, char*);
 mdl_err_t qcr_init(struct qcr*);
 mdl_err_t qcr_de_init(struct qcr*);
 mdl_err_t qcr_load(struct qcr*, char*);

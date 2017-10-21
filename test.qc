@@ -1,2 +1,1 @@
-version:"0.001",
-created_by:"mrdoomlittle",
+hello:["created by mrdoomlittle", "version: 0.001"],

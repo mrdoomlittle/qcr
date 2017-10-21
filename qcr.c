@@ -16,15 +16,22 @@ enum {
 
 # define COLON 0x0
 # define COMMA 0x1
+# define L_BRACKET 0x2
+# define R_BRACKET 0x3
 struct token {
 	mdl_u8_t kind, id;
 	void *p;
 };
 
-struct qcr_var* qcr_get_var(struct qcr *__qcr, char *__name) {
-	struct qcr_var *ret;
+void* qcr_get(struct qcr *__qcr, char *__name) {
+	void *ret;
 	map_get(&__qcr->env, (mdl_u8_t const*)__name, strlen(__name), (void**)&ret);
 	return ret;
+}
+
+void* qcr_get_arr_elem(struct qcr *__qcr, void *__p, mdl_uint_t __no) {
+	struct qcr_array *arr = (struct qcr_array*)__p;
+	return *(void**)vec_get(&arr->data, __no);
 }
 
 struct buff tok_ib;
@@ -32,8 +39,9 @@ struct buff tmp_buff;
 mdl_err_t qcr_init(struct qcr *__qcr) {
 	vec_init(&__qcr->toks, sizeof(struct token));
 	buff_init(&tmp_buff, 80, sizeof(mdl_u8_t));
-	buff_init(&tok_ib, 20, sizeof(struct token*));
+	buff_init(&tok_ib, 40, sizeof(struct token*));
 	vec_init(&__qcr->vars, sizeof(struct qcr_var));
+	vec_init(&__qcr->arrays, sizeof(struct qcr_array));
 	map_init(&__qcr->env);
 }
 
@@ -47,24 +55,15 @@ void build_token(struct token *__tok, struct token *__tmpl) {
 }
 
 void make_ident(struct token *__tok, char *__s) {
-	build_token(__tok, &(struct token){.kind=TOK_IDENT, .p=(void*)__s});
-}
-
+	build_token(__tok, &(struct token){.kind=TOK_IDENT, .p=(void*)__s});}
 void make_keyword(struct token *__tok, mdl_u8_t __id) {
-	build_token(__tok, &(struct token){.kind=TOK_KEYWORD, .id=__id});
-}
-
+	build_token(__tok, &(struct token){.kind=TOK_KEYWORD, .id=__id});}
 void make_str(struct token *__tok, char *__s) {
-	build_token(__tok, &(struct token){.kind=TOK_STR, .p=(void*)__s});
-}
-
+	build_token(__tok, &(struct token){.kind=TOK_STR, .p=(void*)__s});}
 void make_no(struct token *__tok, char *__s) {
-	build_token(__tok, &(struct token){.kind=TOK_NO, .p=(void*)__s});
-}
-
+	build_token(__tok, &(struct token){.kind=TOK_NO, .p=(void*)__s});}
 void make_chr(struct token *__tok, char *__s) {
-    build_token(__tok, &(struct token){.kind=TOK_CHR, .p=(void*)__s});
-}
+    build_token(__tok, &(struct token){.kind=TOK_CHR, .p=(void*)__s});}
 
 mdl_uint_t qcr_str_to_int(char *__s) {
 	char *itr = __s;
@@ -175,6 +174,14 @@ struct token* _read_token(struct qcr *__qcr) {
 			make_keyword(tok, COMMA);
 			__qcr->f_itr++;
 		break;
+		case '[':
+			make_keyword(tok, L_BRACKET);
+			__qcr->f_itr++;
+		break;
+		case ']':
+			make_keyword(tok, R_BRACKET);
+			__qcr->f_itr++;
+		break;
 		default:
 			if ((*__qcr->f_itr >= 'a' && *__qcr->f_itr <= 'z') || *__qcr->f_itr == '_') {
 				make_ident(tok, read_ident(__qcr));
@@ -243,7 +250,7 @@ mdl_err_t qcr_de_init(struct qcr *__qcr) {
 
 mdl_u8_t qcr_expect_tok(struct qcr *__qcr, mdl_u8_t __kind, mdl_u8_t __id) {
 	struct token *tok = read_token(__qcr);
-	return ((tok->kind == __kind) && (tok->id == __id));
+	return (tok->kind == __kind && tok->id == __id);
 }
 
 mdl_u8_t* qcr_read_literal(struct qcr *__qcr, mdl_u8_t *__kind) {
@@ -254,8 +261,56 @@ mdl_u8_t* qcr_read_literal(struct qcr *__qcr, mdl_u8_t *__kind) {
 		*i_val = qcr_str_to_int((char*)val->p);
 		return (mdl_u8_t*)i_val;
 	}
-
 	return (mdl_u8_t*)val->p;
+}
+
+mdl_u8_t next_token_is(struct qcr *__qcr, mdl_u8_t __kind, mdl_u8_t __id) {
+	struct token *tok = read_token(__qcr);
+	if (tok->kind == __kind && tok->id == __id) return 1;
+	uread_token(__qcr, tok);
+	return 0;
+}
+
+mdl_err_t qcr_read_val(struct qcr *__qcr, struct qcr_val *__val) {
+	__val->p = qcr_read_literal(__qcr, &__val->kind);
+	switch(__val->kind) {
+		case TOK_STR: __val->kind = _qc_vt_str; break;
+		case TOK_NO: __val->kind = _qc_vt_int; break;
+		case TOK_CHR: __val->kind = _qc_vt_chr; break;
+	}
+}
+
+mdl_err_t qcr_read_arr(struct qcr *__qcr, struct vec *__data) {
+	vec_init(__data, sizeof(void*));
+	_again:
+	if (next_token_is(__qcr, TOK_KEYWORD, L_BRACKET)) {
+		struct qcr_array **arr;
+		vec_push_back(__data, (void**)&arr);
+
+		*arr = (struct qcr_array*)malloc(sizeof(struct qcr_array));
+		qcr_read_arr(__qcr, &(*arr)->data);
+		goto _again;
+	}
+
+	struct token *tok = peek_token(__qcr);
+	if (tok->kind == TOK_STR || tok->kind == TOK_NO || tok->kind == TOK_CHR) {
+		struct qcr_val **val;
+
+		vec_push_back(__data, (void**)&val);
+		*val = (struct qcr_val*)malloc(sizeof(struct qcr_val));
+		qcr_read_val(__qcr, *val);
+	}
+
+	if (next_token_is(__qcr, TOK_KEYWORD, R_BRACKET)) {
+		return 0;
+	}
+
+	if (!qcr_expect_tok(__qcr, TOK_KEYWORD, COMMA)) {
+		printf("expected comma.\n");
+		return 0;
+	}
+	goto _again;
+	return 0;
 }
 
 mdl_err_t qcr_read_decl(struct qcr *__qcr) {
@@ -264,19 +319,26 @@ mdl_err_t qcr_read_decl(struct qcr *__qcr) {
 		printf("expected colon.\n");
 	}
 
-	mdl_u8_t kind, var_kind;
-	mdl_u8_t *val = qcr_read_literal(__qcr, &kind);
-	switch(kind) {
-		case TOK_STR: var_kind = _qc_vt_str; break;
-		case TOK_NO: var_kind = _qc_vt_int; break;
-		case TOK_CHR: var_kind = _qc_vt_chr; break;
+	void *p;
+	if (next_token_is(__qcr, TOK_KEYWORD, L_BRACKET)) {
+		struct qcr_array *arr;
+		vec_push_back(&__qcr->arrays, (void**)&arr);
+		qcr_read_arr(__qcr, &arr->data);
+
+		arr->name = (char*)name->p;
+
+		p = (void*)arr;
+	} else {
+		struct qcr_val val;
+		qcr_read_val(__qcr, &val);
+
+		struct qcr_var *var = NULL;
+		vec_push_back(&__qcr->vars, (void**)&var);
+		*var = (struct qcr_var){.name=(char*)name->p, .val=val};
+		p = (void*)var;
 	}
 
-	struct qcr_var *var = NULL;
-	vec_push_back(&__qcr->vars, (void**)&var);
-	*var = (struct qcr_var){.kind=var_kind, .name=(char*)name->p, .val=val};
-
-	map_put(&__qcr->env, (char*)name->p, strlen((char*)name->p), var);
+	map_put(&__qcr->env, (char*)name->p, strlen((char*)name->p), p);
 
 	if (!qcr_expect_tok(__qcr, TOK_KEYWORD, COMMA)) {
 		printf("expected comma.\n");
@@ -294,7 +356,5 @@ mdl_err_t _qcr_read(struct qcr *__qcr) {
 }
 
 mdl_err_t qcr_read(struct qcr *__qcr) {
-	while(__qcr->f_itr < __qcr->fp+__qcr->fsize) {
-		_qcr_read(__qcr);
-	}
+	while(__qcr->f_itr < __qcr->fp+__qcr->fsize) _qcr_read(__qcr);
 }
