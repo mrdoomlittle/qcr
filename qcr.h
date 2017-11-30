@@ -1,5 +1,5 @@
-# ifndef __qcr__h
-# define __qcr__h
+# ifndef __mdl__qcr__h
+# define __mdl__qcr__h
 # include <mdlint.h>
 # include <err.h>
 
@@ -19,59 +19,59 @@ struct qcr_var {
 	char *name;
 };
 
-struct buff {
+struct qcr_buff {
 	mdl_u8_t *p, *itr;
 	mdl_uint_t blk_size;
 	mdl_uint_t size;
 };
 
-struct vec {
+struct qcr_vec {
 	mdl_u8_t *p;
 	mdl_uint_t blk_size;
 	mdl_uint_t elem_c, page_c;
 };
 
-struct map {
-	struct vec **table;
+struct qcr_map {
+	struct qcr_vec **table;
 };
 
 struct qcr_array {
 	char *name;
-	struct vec data;
+	struct qcr_vec data;
 };
 
 struct qcr {
-	struct vec arrays;
-	struct vec vars;
-	struct map env;
+	struct qcr_vec arrays;
+	struct qcr_vec vars;
+	struct qcr_map env;
 	mdl_uint_t fsize;
 	mdl_u8_t *fp, *f_itr;
-	struct vec toks;
+	struct qcr_vec toks;
 };
 
 // map.c
-mdl_err_t map_init(struct map*);
-mdl_err_t map_de_init(struct map*);
-mdl_err_t map_get(struct map*, mdl_u8_t const*, mdl_uint_t, void**);
-mdl_err_t map_put(struct map*, mdl_u8_t const*, mdl_uint_t, void*);
+mdl_err_t map_init(struct qcr_map*);
+mdl_err_t map_de_init(struct qcr_map*);
+mdl_err_t map_get(struct qcr_map*, mdl_u8_t const*, mdl_uint_t, void**);
+mdl_err_t map_put(struct qcr_map*, mdl_u8_t const*, mdl_uint_t, void*);
 
 // buff.c
-mdl_err_t buff_init(struct buff*, mdl_uint_t, mdl_uint_t);
-void buff_put(struct buff*, void*);
-void buff_get(struct buff*, void*);
-void buff_itr_mf(struct buff*);
-void buff_itr_mb(struct buff*);
-void buff_itr_reset(struct buff*);
-mdl_uint_t buff_blk_c(struct buff*);
-void buff_de_init(struct buff*);
+mdl_err_t buff_init(struct qcr_buff*, mdl_uint_t, mdl_uint_t);
+void buff_put(struct qcr_buff*, void*);
+void buff_get(struct qcr_buff*, void*);
+void buff_itr_incr(struct qcr_buff*);
+void buff_itr_decr(struct qcr_buff*);
+void buff_itr_reset(struct qcr_buff*);
+mdl_uint_t buff_blk_c(struct qcr_buff*);
+void buff_de_init(struct qcr_buff*);
 // vec.c
-mdl_err_t vec_init(struct vec*, mdl_uint_t);
-void vec_push_back(struct vec*, void**);
-void vec_pop_back(struct vec*, void*);
-mdl_err_t vec_de_init(struct vec*);
-void* vec_begin(struct vec*);
-void* vec_end(struct vec*);
-void* vec_get(struct vec*, mdl_uint_t);
+mdl_err_t vec_init(struct qcr_vec*, mdl_uint_t);
+void vec_push_back(struct qcr_vec*, void**);
+void vec_pop_back(struct qcr_vec*, void*);
+mdl_err_t vec_de_init(struct qcr_vec*);
+void* vec_begin(struct qcr_vec*);
+void* vec_end(struct qcr_vec*);
+void* vec_get(struct qcr_vec*, mdl_uint_t);
 
 // qcr.c
 void* qcr_get_arr_elem(struct qcr*, void*, mdl_uint_t);
@@ -80,4 +80,4 @@ mdl_err_t qcr_init(struct qcr*);
 mdl_err_t qcr_de_init(struct qcr*);
 mdl_err_t qcr_load(struct qcr*, char*);
 mdl_err_t qcr_read(struct qcr*);
-# endif /*__qcr__h*/
+# endif /*__mdl__qcr__h*/

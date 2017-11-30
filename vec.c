@@ -3,8 +3,8 @@
 # include <string.h>
 # include <stdio.h>
 # define PAGE_SIZE 86
-mdl_err_t vec_init(struct vec *__vec, mdl_uint_t __blk_size) {
-	*__vec = (struct vec) {
+mdl_err_t vec_init(struct qcr_vec *__vec, mdl_uint_t __blk_size) {
+	*__vec = (struct qcr_vec) {
 		.blk_size = __blk_size,
 		.elem_c = 0,
 		.page_c = 0
@@ -16,27 +16,26 @@ mdl_err_t vec_init(struct vec *__vec, mdl_uint_t __blk_size) {
 	}
 }
 
-void vec_push_back(struct vec *__vec, void **__p) {
+void vec_push_back(struct qcr_vec *__vec, void **__p) {
 	if (((__vec->page_c*(PAGE_SIZE*__vec->blk_size))-((__vec->elem_c+1)*__vec->blk_size)) > (PAGE_SIZE*__vec->blk_size))
 		__vec->p = (mdl_u8_t*)realloc(__vec->p, (++__vec->page_c)*(PAGE_SIZE*__vec->blk_size));
-
 	if (__p != NULL) *__p = (void*)(__vec->p+(__vec->elem_c*__vec->blk_size));
 	__vec->elem_c++;
 }
 
-void vec_pop_back(struct vec *__vec, void *__p) {
+void vec_pop_back(struct qcr_vec *__vec, void *__p) {
 	if (__p != NULL) memcpy(__p, __vec->p+(__vec->elem_c*__vec->blk_size), __vec->blk_size);
 	if (((__vec->page_c*(PAGE_SIZE*__vec->blk_size))-((__vec->elem_c-1)*__vec->blk_size)) < (PAGE_SIZE*__vec->blk_size) && __vec->page_c > 1)
 		__vec->p = (mdl_u8_t*)realloc(__vec->p, (--__vec->page_c)*(PAGE_SIZE*__vec->blk_size));
 	__vec->elem_c--;
 }
 
-void* vec_get(struct vec *__vec, mdl_uint_t __off) {
+void* vec_get(struct qcr_vec *__vec, mdl_uint_t __off) {
 	return (void*)(__vec->p+(__off*__vec->blk_size));
 }
 
-void* vec_begin(struct vec *__vec) {return __vec->p;}
-void* vec_end(struct vec *__vec) {return __vec->p+(__vec->elem_c*__vec->blk_size);}
-mdl_err_t vec_de_init(struct vec *__vec) {
+void* vec_begin(struct qcr_vec *__vec) {return __vec->p;}
+void* vec_end(struct qcr_vec *__vec) {return __vec->p+(__vec->elem_c*__vec->blk_size);}
+mdl_err_t vec_de_init(struct qcr_vec *__vec) {
 	if (__vec->p != NULL) free(__vec->p);
 }

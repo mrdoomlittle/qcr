@@ -34,8 +34,8 @@ void* qcr_get_arr_elem(struct qcr *__qcr, void *__p, mdl_uint_t __no) {
 	return *(void**)vec_get(&arr->data, __no);
 }
 
-struct buff tok_ib;
-struct buff tmp_buff;
+struct qcr_buff tok_ib;
+struct qcr_buff tmp_buff;
 mdl_err_t qcr_init(struct qcr *__qcr) {
 	vec_init(&__qcr->toks, sizeof(struct token));
 	buff_init(&tmp_buff, 80, sizeof(mdl_u8_t));
@@ -43,6 +43,7 @@ mdl_err_t qcr_init(struct qcr *__qcr) {
 	vec_init(&__qcr->vars, sizeof(struct qcr_var));
 	vec_init(&__qcr->arrays, sizeof(struct qcr_array));
 	map_init(&__qcr->env);
+	return MDL_SUCCESS;
 }
 
 mdl_u8_t static ignore_space(struct qcr *__qcr) {
@@ -94,13 +95,13 @@ mdl_uint_t qcr_str_to_int(char *__s) {
 }
 
 char* read_ident(struct qcr *__qcr) {
-	while((*__qcr->f_itr >= 'a' && *__qcr->f_itr <= 'z') || *__qcr->f_itr == '_' || (*__qcr->f_itr >= '0' && *__qcr->f_itr <= '9')) {
+	while((*__qcr->f_itr >= 'a' && *__qcr->f_itr <= 'z') || *__qcr->f_itr == '_' || (*__qcr->f_itr >= '0' && *__qcr->f_itr <= '9') || (*__qcr->f_itr >= 'A' && *__qcr->f_itr <= 'Z')) {
 		buff_put(&tmp_buff, __qcr->f_itr++);
-		buff_itr_mf(&tmp_buff);
+		buff_itr_incr(&tmp_buff);
 	}
 
 	buff_put(&tmp_buff, "\0");
-	buff_itr_mf(&tmp_buff);
+	buff_itr_incr(&tmp_buff);
 
 	mdl_uint_t size = buff_blk_c(&tmp_buff);
 	char *p = (char*)malloc(size);
@@ -114,11 +115,11 @@ char* read_str(struct qcr *__qcr) {
 	__qcr->f_itr++;
 	while(*__qcr->f_itr != '"') {
 		buff_put(&tmp_buff, __qcr->f_itr++);
-		buff_itr_mf(&tmp_buff);
+		buff_itr_incr(&tmp_buff);
 	}
 
 	buff_put(&tmp_buff, "\0");
-	buff_itr_mf(&tmp_buff);
+	buff_itr_incr(&tmp_buff);
 
 	mdl_uint_t size = buff_blk_c(&tmp_buff);
 	char *p = (char*)malloc(size);
@@ -131,11 +132,11 @@ char* read_str(struct qcr *__qcr) {
 char* read_no(struct qcr *__qcr) {
 	while(*__qcr->f_itr >= '0' && *__qcr->f_itr <= '9') {
 		buff_put(&tmp_buff, __qcr->f_itr++);
-		buff_itr_mf(&tmp_buff);
+		buff_itr_incr(&tmp_buff);
 	}
 
 	buff_put(&tmp_buff, "\0");
-	buff_itr_mf(&tmp_buff);
+	buff_itr_incr(&tmp_buff);
 
 	mdl_uint_t size = buff_blk_c(&tmp_buff);
 	char *p = (char*)malloc(size);
@@ -200,7 +201,7 @@ struct token* _read_token(struct qcr *__qcr) {
 struct token* read_token(struct qcr *__qcr) {
 	if (buff_blk_c(&tok_ib) > 0) {
 		struct token *tok;
-		buff_itr_mb(&tok_ib);
+		buff_itr_decr(&tok_ib);
 		buff_get(&tok_ib, &tok);
 		return tok;
 	}
@@ -209,7 +210,7 @@ struct token* read_token(struct qcr *__qcr) {
 
 void uread_token(struct qcr *__qcr, struct token *__tok) {
 	buff_put(&tok_ib, &__tok);
-	buff_itr_mf(&tok_ib);
+	buff_itr_incr(&tok_ib);
 }
 
 struct token* peek_token(struct qcr *__qcr) {
@@ -239,6 +240,7 @@ mdl_err_t qcr_load(struct qcr *__qcr, char *__fpth) {
 	__qcr->f_itr = __qcr->fp = (mdl_u8_t*)malloc(st.st_size);
 	read(fd, __qcr->fp, (__qcr->fsize = st.st_size));
 	close(fd);
+	return MDL_SUCCESS;
 }
 
 mdl_err_t qcr_de_init(struct qcr *__qcr) {
@@ -246,6 +248,7 @@ mdl_err_t qcr_de_init(struct qcr *__qcr) {
 	vec_de_init(&__qcr->toks);
 	buff_de_init(&tmp_buff);
 	map_de_init(&__qcr->env);
+	return MDL_SUCCESS;
 }
 
 mdl_u8_t qcr_expect_tok(struct qcr *__qcr, mdl_u8_t __kind, mdl_u8_t __id) {
@@ -277,10 +280,13 @@ mdl_err_t qcr_read_val(struct qcr *__qcr, struct qcr_val *__val) {
 		case TOK_STR: __val->kind = _qc_vt_str; break;
 		case TOK_NO: __val->kind = _qc_vt_int; break;
 		case TOK_CHR: __val->kind = _qc_vt_chr; break;
+		default:
+			return MDL_FAILURE;
 	}
+	return MDL_SUCCESS;
 }
 
-mdl_err_t qcr_read_arr(struct qcr *__qcr, struct vec *__data) {
+mdl_err_t qcr_read_arr(struct qcr *__qcr, struct qcr_vec *__data) {
 	vec_init(__data, sizeof(void*));
 	_again:
 	if (next_token_is(__qcr, TOK_KEYWORD, L_BRACKET)) {
@@ -288,7 +294,8 @@ mdl_err_t qcr_read_arr(struct qcr *__qcr, struct vec *__data) {
 		vec_push_back(__data, (void**)&arr);
 
 		*arr = (struct qcr_array*)malloc(sizeof(struct qcr_array));
-		qcr_read_arr(__qcr, &(*arr)->data);
+		if (qcr_read_arr(__qcr, &(*arr)->data) != MDL_SUCCESS)
+			return MDL_FAILURE;
 		goto _again;
 	}
 
@@ -298,25 +305,27 @@ mdl_err_t qcr_read_arr(struct qcr *__qcr, struct vec *__data) {
 
 		vec_push_back(__data, (void**)&val);
 		*val = (struct qcr_val*)malloc(sizeof(struct qcr_val));
-		qcr_read_val(__qcr, *val);
+		if (qcr_read_val(__qcr, *val) != MDL_SUCCESS)
+			return MDL_FAILURE;
 	}
 
 	if (next_token_is(__qcr, TOK_KEYWORD, R_BRACKET)) {
-		return 0;
+		return MDL_SUCCESS;
 	}
 
 	if (!qcr_expect_tok(__qcr, TOK_KEYWORD, COMMA)) {
-		printf("expected comma.\n");
-		return 0;
+		fprintf(stdout, "expected comma.\n");
+		return MDL_FAILURE;
 	}
 	goto _again;
-	return 0;
+	return MDL_SUCCESS;
 }
 
 mdl_err_t qcr_read_decl(struct qcr *__qcr) {
 	struct token *name = read_token(__qcr);
 	if (!qcr_expect_tok(__qcr, TOK_KEYWORD, COLON)) {
 		printf("expected colon.\n");
+		return MDL_FAILURE;
 	}
 
 	void *p;
@@ -339,22 +348,33 @@ mdl_err_t qcr_read_decl(struct qcr *__qcr) {
 	}
 
 	map_put(&__qcr->env, (char*)name->p, strlen((char*)name->p), p);
+	free(name->p);
 
 	if (!qcr_expect_tok(__qcr, TOK_KEYWORD, COMMA)) {
 		printf("expected comma.\n");
+		return MDL_FAILURE;
 	}
+	return MDL_SUCCESS;
 }
 
 mdl_err_t _qcr_read(struct qcr *__qcr) {
+	mdl_err_t any_err = MDL_SUCCESS;
 	struct token *tok = peek_token(__qcr);
 	if (tok == NULL) return MDL_SUCCESS;
 	switch(tok->kind) {
 		case TOK_IDENT:
-			qcr_read_decl(__qcr);
+			any_err = qcr_read_decl(__qcr);
 		break;
+		default:
+			return MDL_FAILURE;
 	}
+	return any_err;
 }
 
 mdl_err_t qcr_read(struct qcr *__qcr) {
-	while(__qcr->f_itr < __qcr->fp+__qcr->fsize) _qcr_read(__qcr);
+	while(__qcr->f_itr < __qcr->fp+__qcr->fsize) {
+		if (_qcr_read(__qcr) != MDL_SUCCESS)
+			return MDL_FAILURE;
+	}
+	return MDL_SUCCESS;
 }

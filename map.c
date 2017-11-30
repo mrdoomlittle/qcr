@@ -26,8 +26,8 @@ mdl_u32_t map_hash(mdl_u8_t const *__key, mdl_uint_t __bc) {
 	return ret_val;
 }
 
-map_entry_t *map_find(struct map *__map, mdl_u8_t const *__key, mdl_uint_t __bc, mdl_u32_t __val) {
-	struct vec **map_blk = __map->table+(__val&0xFF);
+map_entry_t *map_find(struct qcr_map *__map, mdl_u8_t const *__key, mdl_uint_t __bc, mdl_u32_t __val) {
+	struct qcr_vec **map_blk = __map->table+(__val&0xFF);
 	if (*map_blk == NULL) return NULL;
 
 	map_entry_t *itr = (map_entry_t*)vec_begin(*map_blk);
@@ -39,9 +39,9 @@ map_entry_t *map_find(struct map *__map, mdl_u8_t const *__key, mdl_uint_t __bc,
 	return NULL;
 }
 
-mdl_err_t map_get(struct map *__map, mdl_u8_t const *__key, mdl_uint_t __bc, void **__data) {
+mdl_err_t map_get(struct qcr_map *__map, mdl_u8_t const *__key, mdl_uint_t __bc, void **__data) {
 	mdl_u32_t val = map_hash(__key, __bc);
-	struct vec **map_blk = __map->table+(val&0xFF);
+	struct qcr_vec **map_blk = __map->table+(val&0xFF);
 	if (*map_blk == NULL) return MDL_FAILURE;
 
 	*__data = map_find(__map, __key, __bc, val)->data;
@@ -49,13 +49,13 @@ mdl_err_t map_get(struct map *__map, mdl_u8_t const *__key, mdl_uint_t __bc, voi
 }
 
 
-mdl_err_t map_put(struct map *__map, mdl_u8_t const *__key, mdl_uint_t __bc, void *__data) {
+mdl_err_t map_put(struct qcr_map *__map, mdl_u8_t const *__key, mdl_uint_t __bc, void *__data) {
 	mdl_u32_t val = map_hash(__key, __bc);
 	if (map_find(__map, __key, __bc, val) != NULL) return MDL_FAILURE;
 
-	struct vec **map_blk = __map->table+(val&0xFF);
+	struct qcr_vec **map_blk = __map->table+(val&0xFF);
 	if (*map_blk == NULL) {
-		*map_blk = (struct vec*)malloc(sizeof(struct vec));
+		*map_blk = (struct qcr_vec*)malloc(sizeof(struct qcr_vec));
 		vec_init(*map_blk, sizeof(map_entry_t));
 	}
 
@@ -68,21 +68,21 @@ mdl_err_t map_put(struct map *__map, mdl_u8_t const *__key, mdl_uint_t __bc, voi
 	return MDL_SUCCESS;
 }
 
-mdl_err_t map_init(struct map *__map) {
-	__map->table = (struct vec**)malloc(0xFF*sizeof(struct vec*));
-	struct vec **itr = __map->table;
+mdl_err_t map_init(struct qcr_map *__map) {
+	__map->table = (struct qcr_vec**)malloc(0xFF*sizeof(struct qcr_vec*));
+	struct qcr_vec **itr = __map->table;
 	while(itr != __map->table+0xFF) *(itr++) = NULL;
 }
 
-void static free_map_blk(struct vec **__map_blk) {
+void static free_map_blk(struct qcr_vec **__map_blk) {
 	map_entry_t *itr = (map_entry_t*)vec_begin(*__map_blk);
 	while(itr <= (map_entry_t*)vec_end(*__map_blk)) free((itr++)->key);
 	vec_de_init(*__map_blk);
 	free(*__map_blk);
 }
 
-mdl_err_t map_de_init(struct map *__map) {
-	struct vec **itr = __map->table;
+mdl_err_t map_de_init(struct qcr_map *__map) {
+	struct qcr_vec **itr = __map->table;
 	while(itr != __map->table+0xFF) {
 		if (*itr != NULL) free_map_blk(itr);
 		itr++;
