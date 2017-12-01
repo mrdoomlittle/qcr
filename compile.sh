@@ -1,4 +1,4 @@
-C_IFLAGS="-Ierr/inc"
+C_IFLAGS="-Imdlerr/inc"
 sh clean.sh
 gcc -c -std=c11 $C_IFLAGS -o qcr.o qcr.c
 gcc -c -std=c11 $C_IFLAGS -o vec.o vec.c

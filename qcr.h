@@ -1,7 +1,7 @@
 # ifndef __mdl__qcr__h
 # define __mdl__qcr__h
 # include <mdlint.h>
-# include <err.h>
+# include <mdlerr.h>
 
 enum {
 	_qc_vt_str,
